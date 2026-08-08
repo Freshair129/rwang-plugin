@@ -1,0 +1,15 @@
+{
+  "PostToolUse": [
+    {
+      "matcher": "Write|Edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PLUGIN_ROOT/scripts/drift-check.ps1\"",
+          "timeout": 15,
+          "description": "RWANG drift detector — warns if edited files are tracked in doc-graph and may cause staleness"
+        }
+      ]
+    }
+  ]
+}

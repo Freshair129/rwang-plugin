@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RWANG Document Graph",
+  "description": "Schema for docs/.doc-graph.json — the document knowledge graph connecting docs, requirements, code, and components",
+  "type": "object",
+  "required": ["version", "generated_by", "generated_at", "nodes", "edges"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "generated_by": {
+      "type": "string",
+      "description": "Tool that generated this graph",
+      "enum": ["rwang:doc-architect", "rwang:doc-graph"]
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of generation"
+    },
+    "template_id": {
+      "type": "string",
+      "description": "Which template was used (from templates.json)"
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "total_nodes": { "type": "integer" },
+        "total_edges": { "type": "integer" },
+        "stale_edges": { "type": "integer" },
+        "contradiction_edges": { "type": "integer" },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "requirements_with_code": { "type": "string" },
+            "requirements_with_tests": { "type": "string" },
+            "code_with_docs": { "type": "string" }
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique node identifier. Format: <type>:<identifier>",
+            "pattern": "^(doc|sec|req|code|comp|test|api|db):.+"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["document", "section", "requirement", "code_file", "component", "test", "api_endpoint", "db_table"]
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label"
+          },
+          "path": {
+            "type": "string",
+            "description": "File path (relative to project root)"
+          },
+          "defined_in": {
+            "type": "string",
+            "description": "Document where this node is defined"
+          },
+          "section": {
+            "type": "string",
+            "description": "Section reference (e.g., §5.1)"
+          },
+          "hash": {
+            "type": "string",
+            "description": "Content hash for change detection"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["current", "changed", "stale", "new", "deleted"],
+            "description": "Node status relative to last scan"
+          },
+          "last_verified": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When this node was last verified as current"
+          },
+          "annotations": {
+            "type": "object",
+            "description": "Structured annotations found in this code file",
+            "properties": {
+              "@req": { "type": "array", "items": { "type": "string" } },
+              "@spec": { "type": "array", "items": { "type": "string" } },
+              "@designs": { "type": "array", "items": { "type": "string" } },
+              "@tested": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "type"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Source node ID"
+          },
+          "to": {
+            "type": "string",
+            "description": "Target node ID"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "specifies",
+              "implements",
+              "designs",
+              "tests",
+              "verifies",
+              "depends_on",
+              "references",
+              "exposes",
+              "persists_to",
+              "contradicts",
+              "stale"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["current", "stale", "contradiction"],
+            "description": "Edge health status"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Explanation for stale/contradiction status"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["annotation", "scan", "manual", "dag-propagation"],
+            "description": "How this edge was created"
+          }
+        }
+      }
+    }
+  }
+}
