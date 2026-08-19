@@ -21,6 +21,11 @@
         "not_applicable": { "type": "array", "items": { "$ref": "#/definitions/viewName" } }
       }
     },
+    "filename_convention": {
+      "type": "string",
+      "description": "Adapter filename mode (SPEC A4 SS2.1.1). id-prefixed: <ID>--<name>.md (identity hinted by filename). name-only: <name>.md with in-file identity (frontmatter id: / %% @id); binding via registry canonical_path, conflicts fail RWG-109. Default: id-prefixed.",
+      "enum": ["id-prefixed", "name-only"]
+    },
     "trust_hierarchy": {
       "type": "array",
       "description": "Ordered contradiction-resolution sources, strongest first. Profile-owned — Core only executes the declared order. Default: [code, sdd, prd].",

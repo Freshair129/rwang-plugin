@@ -44,11 +44,14 @@ REQ_ID_ERE='(FR-[a-z][0-9]{5}|FEAT-[a-z][0-9]{2}|(FR|NFR|SDD|SEC|AI-AGT|AI-ETH|B
 # Scan for structured annotations in code
 grep -rn $INCLUDE_FLAGS $EXCLUDE_DIRS -E '@(req|spec|designs|tested)\s+' "$ROOT_PATH" > "$STRUCTURED_FILE" 2>/dev/null || true
 
-# Scan Mermaid diagram annotations (.mmd): %% @req / %% @spec / %% @diagram_type
-grep -rn --include='*.mmd' $EXCLUDE_DIRS -E '^[[:space:]]*%%[[:space:]]*@(req|spec|diagram_type)[[:space:]]+' "$ROOT_PATH" >> "$STRUCTURED_FILE" 2>/dev/null || true
+# Scan Mermaid diagram annotations (.mmd): %% @req / %% @spec / %% @diagram_type / %% @id
+grep -rn --include='*.mmd' $EXCLUDE_DIRS -E '^[[:space:]]*%%[[:space:]]*@(req|spec|diagram_type|id)[[:space:]]+' "$ROOT_PATH" >> "$STRUCTURED_FILE" 2>/dev/null || true
 
-# Scan test-spec frontmatter (.test.md): req: / spec: / test_type:
-grep -rn --include='*.test.md' $EXCLUDE_DIRS -E '^(req|spec|test_type)[[:space:]]*:' "$ROOT_PATH" >> "$STRUCTURED_FILE" 2>/dev/null || true
+# Scan test-spec frontmatter (.test.md): id: / req: / spec: / test_type:
+grep -rn --include='*.test.md' $EXCLUDE_DIRS -E '^(id|req|spec|test_type)[[:space:]]*:' "$ROOT_PATH" >> "$STRUCTURED_FILE" 2>/dev/null || true
+
+# Scan doc frontmatter identity (name-only filename mode): id: FEAT-a01
+grep -rn --include='*.md' --exclude='*.test.md' $EXCLUDE_DIRS -E '^id[[:space:]]*:[[:space:]]*[A-Za-z0-9:_.-]+[[:space:]]*$' "$ROOT_PATH" >> "$STRUCTURED_FILE" 2>/dev/null || true
 
 # Scan for unstructured requirement references
 grep -rn $INCLUDE_FLAGS $EXCLUDE_DIRS -E "$REQ_ID_ERE" "$ROOT_PATH" > "$UNSTRUCTURED_FILE" 2>/dev/null || true

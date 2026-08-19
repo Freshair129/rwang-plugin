@@ -296,6 +296,7 @@ if (Test-Path $entityTypesPath) {
 $registryIds = @{}        # id -> entry file (duplicate detection)
 $aliasMap = @{}           # alias id -> primary id (rename/equivalence support)
 $canonicalPaths = @{}     # canonical_path -> entity id (path-collision detection)
+$registryPathById = @{}   # id -> registered path (identity-binding check, RWG-109)
 $registryEntries = @()
 if (Test-Path $entityDir) {
     foreach ($f in (Get-ChildItem -Path $entityDir -Recurse -File | Where-Object { $_.Name -match '\.(yaml|yml|json)$' })) {
@@ -315,6 +316,7 @@ if (Test-Path $entityDir) {
             } else {
                 $canonicalPaths[$cpath] = $eid
             }
+            $registryPathById[$eid] = $cpath
         }
         # aliases (rename/equivalence, CR A2 SS2.3.4): must not collide with any
         # entity_id or another alias
@@ -355,6 +357,9 @@ if (Test-Path $entityDir) {
                             Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: nested '$nid' already registered by '$($registryIds[$nid])'"
                         } else {
                             $registryIds[$nid] = $f.FullName
+                            if ($null -ne $item['path'] -and [string]$item['path'] -ne '') {
+                                $registryPathById[$nid] = [string]$item['path']
+                            }
                         }
                     }
                 }
@@ -399,6 +404,12 @@ if (Test-Path $discoveryPath) {
             Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: '$did' appears twice in discovery output (aliases resolve to the same entity)"
         }
         $discoveryIds[$did] = $true
+        # Identity-binding check (RWG-109, name-only filename mode): a discovered
+        # entity's path must match the path the Registry binds that ID to.
+        $dpath = [string]$ent.path
+        if ($dpath -ne '' -and $registryPathById.ContainsKey($did) -and $registryPathById[$did] -ne $dpath) {
+            Add-Finding "RWG-109" "IDENTITY_BINDING_MISMATCH: '$did' discovered at '$dpath' but the Registry binds it to '$($registryPathById[$did])' - update canonical_path (rename) or fix the in-file id"
+        }
     }
 } else {
     Add-Finding "RWG-103" "GRAPH_STALE: discovery.json missing — cannot anchor the graph to a checkout"

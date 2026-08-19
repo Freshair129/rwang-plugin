@@ -19,6 +19,7 @@ const another = "@tested annotations should not be scanned";
 '@ | Set-Content -LiteralPath (Join-Path $fixture "fixture.ts") -Encoding utf8
 
     @'
+%% @id FEAT-a01:sequence
 %% @req FR-a01001, FR-a01002
 %% @spec FEAT-a01
 %% @diagram_type sequence
@@ -40,11 +41,22 @@ test_type: TDD / Acceptance
 Body text mentioning req: FR-777 must not be scanned after frontmatter.
 '@ | Set-Content -LiteralPath (Join-Path $fixture "fixture_feature.test.md") -Encoding utf8
 
+    @'
+---
+id: FEAT-a01
+spec_format: EARS
+---
+
+# Feature: Queue Management
+
+Body text with id: FR-777 after frontmatter must never be scanned.
+'@ | Set-Content -LiteralPath (Join-Path $fixture "queue_management.md") -Encoding utf8
+
     $report = & $scanner -Path $fixture -Format json | ConvertFrom-Json
-    if ($report.summary.structured_count -ne 11) { throw "Expected 11 structured annotations (5 code + 3 mmd + 3 test.md), got $($report.summary.structured_count)." }
+    if ($report.summary.structured_count -ne 13) { throw "Expected 13 structured annotations (5 code + 4 mmd + 3 test.md + 1 doc-id), got $($report.summary.structured_count)." }
     if ($report.summary.unstructured_count -ne 1) { throw "Expected 1 unstructured annotation, got $($report.summary.unstructured_count)." }
     $ids = @($report.summary.unique_ids)
-    foreach ($expected in @("FR-001", "NFR-002", "SDD-004", "§5.5", "__tests__/generation.test.ts::creates_generation", "FR-003", "FR-a01001", "FR-a01002", "FEAT-a01", "sequence", "TDD / Acceptance")) {
+    foreach ($expected in @("FR-001", "NFR-002", "SDD-004", "§5.5", "__tests__/generation.test.ts::creates_generation", "FR-003", "FR-a01001", "FR-a01002", "FEAT-a01", "FEAT-a01:sequence", "sequence", "TDD / Acceptance")) {
         if ($ids -notcontains $expected) { throw "Missing expected annotation value: $expected" }
     }
     foreach ($unexpected in @("FR-999", "SDD-777", "annotations", "FR-888", "FR-777", "FR-a01", "FR-010")) {

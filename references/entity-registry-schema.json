@@ -33,6 +33,10 @@
       "type": "string",
       "description": "Path of the entity's source artifact, relative to project root"
     },
+    "label": {
+      "type": "string",
+      "description": "Human display name (e.g. queue_management). Data, never identity: labels may change freely; IDs may not. In name-only filename mode the filename is derived from this label."
+    },
     "parent_domain_id": {
       "type": "string",
       "description": "Required for features. Domain membership is declared here, never inferred from filename letters or sequence positions.",

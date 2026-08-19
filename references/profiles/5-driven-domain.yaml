@@ -1,6 +1,9 @@
 # RWANG view profile — validated against references/profile-schema.json
 # Reference profile for 5-Driven Architecture projects (Domain/Feature/Spec/Test/Diagram-Driven)
 profile_id: 5-driven-domain
+# name-only: files are <name>.md (e.g. queue_management.md); identity travels
+# in-file (frontmatter id: / %% @id) and binds through registry canonical_path.
+filename_convention: name-only
 views:
   required: [Domain, Requirement, Feature, Diagram, Verification]
   optional: [Implementation, Operations, Release]   # if present, must be fully valid

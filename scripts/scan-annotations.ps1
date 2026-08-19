@@ -208,6 +208,56 @@ function Scan-MermaidFile {
                 raw        = $line.Trim()
             }
         }
+        elseif ($line -match '^\s*%%\s*@id\s+(?<value>[A-Za-z0-9:_.\-]+)\s*$') {
+            # name-only filename mode: identity travels in-file (SPEC A4 2.1.1)
+            $annotations += @{
+                file       = $relativePath
+                line       = $lineNum
+                type       = "structured"
+                annotation = "@id"
+                ids        = @($Matches['value'])
+                raw        = $line.Trim()
+            }
+        }
+    }
+
+    return $annotations
+}
+
+function Scan-DocIdFrontmatter {
+    # name-only filename mode: any governed .md declares identity via
+    # frontmatter `id: FEAT-a01` (SPEC A4 2.1.1). Frontmatter only - body
+    # text is never scanned for ids.
+    param(
+        [System.IO.FileInfo]$File,
+        [string]$RootPath
+    )
+
+    $relativePath = Get-RelativePath -File $File -RootPath $RootPath
+    $lines = Get-Content $File.FullName -TotalCount 30 -ErrorAction SilentlyContinue
+
+    $annotations = @()
+    $inFrontmatter = $false
+    $lineNum = 0
+
+    foreach ($line in $lines) {
+        $lineNum++
+        if ($line -match '^---\s*$') {
+            if (-not $inFrontmatter -and $lineNum -eq 1) { $inFrontmatter = $true; continue }
+            if ($inFrontmatter) { break }
+        }
+        if (-not $inFrontmatter) { break }
+
+        if ($line -match '^id\s*:\s*(?<value>[A-Za-z0-9:_.\-]+)\s*$') {
+            $annotations += @{
+                file       = $relativePath
+                line       = $lineNum
+                type       = "structured"
+                annotation = "@id"
+                ids        = @($Matches['value'])
+                raw        = $line.Trim()
+            }
+        }
     }
 
     return $annotations
@@ -238,7 +288,17 @@ function Scan-TestSpecFile {
         }
         if (-not $inFrontmatter) { continue }
 
-        if ($line -match '^(?<key>req|spec)\s*:\s*(?<value>.+)$') {
+        if ($line -match '^id\s*:\s*(?<value>[A-Za-z0-9:_.\-]+)\s*$') {
+            $annotations += @{
+                file       = $relativePath
+                line       = $lineNum
+                type       = "structured"
+                annotation = "@id"
+                ids        = @($Matches['value'])
+                raw        = $line.Trim()
+            }
+        }
+        elseif ($line -match '^(?<key>req|spec)\s*:\s*(?<value>.+)$') {
             $rawValue = $Matches['value'].Trim().Trim('[', ']')
             $ids = @([regex]::Matches($rawValue, $RequirementId) | ForEach-Object { $_.Value })
             if ($ids.Count -gt 0) {
@@ -272,6 +332,7 @@ $resolvedPath = (Resolve-Path $Path).Path
 $files = Get-SourceFiles -RootPath $resolvedPath
 $mermaidFiles = Get-FilesByFilter -RootPath $resolvedPath -Filters @("*.mmd")
 $testSpecFiles = Get-FilesByFilter -RootPath $resolvedPath -Filters @("*.test.md")
+$docMdFiles = Get-FilesByFilter -RootPath $resolvedPath -Filters @("*.md") | Where-Object { $_.Name -notlike "*.test.md" }
 
 $allAnnotations = @()
 $fileCount = 0
@@ -294,6 +355,14 @@ foreach ($file in $mermaidFiles) {
 
 foreach ($file in $testSpecFiles) {
     $result = Scan-TestSpecFile -File $file -RootPath $resolvedPath
+    if ($result.Count -gt 0) {
+        $allAnnotations += $result
+        $fileCount++
+    }
+}
+
+foreach ($file in $docMdFiles) {
+    $result = Scan-DocIdFrontmatter -File $file -RootPath $resolvedPath
     if ($result.Count -gt 0) {
         $allAnnotations += $result
         $fileCount++

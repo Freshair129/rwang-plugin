@@ -249,6 +249,14 @@ Assert-Case -Name "two entities claiming the same canonical_path" -ExpectCode "R
         Set-Content -LiteralPath $p -Encoding utf8 -NoNewline
 }
 
+Assert-Case -Name "identity binding mismatch (name-only mode: file moved, registry stale)" -ExpectCode "RWG-109" -Mutate {
+    param($r)
+    Edit-JsonFile (Join-Path $r "discovery.json") {
+        param($d)
+        ($d.entities | Where-Object { $_.id -eq "feat:FEAT-a01" }).path = "docs/domains/DOM-01--playback/specs/playlist_management.md"
+    }
+}
+
 Assert-Case -Name "prefix-ambiguous IDs in a name-based namespace" -ExpectCode "RWG-106" -Mutate {
     param($r)
     @'

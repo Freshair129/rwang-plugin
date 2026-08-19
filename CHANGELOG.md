@@ -4,6 +4,21 @@ All notable changes to the RWANG plugin. Versions follow semver; the
 `version` field in `.claude-plugin/plugin.json` is the update signal for
 marketplace installs.
 
+## [1.2.0] — 2026-08-20
+
+Implements SPEC-5DRIVEN-01 Revision A4: **name-only filename mode** — filenames carry only the human name (`queue_management.md`); identity travels in-file and binds through the Registry.
+
+### Added
+- Profile field `filename_convention: id-prefixed | name-only` (default `id-prefixed`; the `5-driven-domain` reference profile now uses `name-only`).
+- In-file identity declarations: frontmatter `id: FEAT-a01` for `.md`, `%% @id FEAT-a01:sequence` for `.mmd` — scanner support in both `.ps1` (strict, frontmatter-only) and `.sh`.
+- Registry entry `label` field: the display name (`queue_management`) is data, never identity — labels rename freely, IDs never change.
+- Validator `RWG-109 IDENTITY_BINDING_MISMATCH`: a discovered entity whose path disagrees with the Registry's `canonical_path` for that ID fails loudly instead of silently rebinding.
+- Feature-scoped diagram/test-spec ID convention for name-only projects (`diag:FEAT-a01:sequence`) — path changes never churn identity.
+- Tests: 23 validator cases + doc-id frontmatter scanner cases.
+
+### Clarified
+- `FEAT-a01` reads as *[type]-[domain-letter][running no]* ("feature 01 under domain a") — the letter is a human mnemonic only; authoritative membership is `parent_domain_id`.
+
 ## [1.1.1] — 2026-08-20
 
 Implements SPEC-5DRIVEN-01 Revision A3 (rename/alias/prefix-collision rules), driven by the BikeOps migration's `DOM-01--` → `DOM-a--` folder-rename proposal.

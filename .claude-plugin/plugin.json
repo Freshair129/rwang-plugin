@@ -1,6 +1,6 @@
 {
   "name": "rwang",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "RWANG (อาหวัง) — Document Intelligence System: architect, preflight, graph, and implementation planning for SWE-standard project documentation",
   "author": {
     "name": "GPIC Team"

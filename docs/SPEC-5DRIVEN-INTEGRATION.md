@@ -2,8 +2,8 @@
 
 **Document ID:** `SPEC-5DRIVEN-01`
 **Companion to:** [CR-2026-08-20-01](cr/CR-2026-08-20-01-diagram-test-and-5driven-traceability.md)
-**Status:** DRAFT (A3 ALIGNED)
-**Revision:** A3
+**Status:** DRAFT (A4 ALIGNED)
+**Revision:** A4
 **Last Updated:** 2026-08-20
 
 ---
@@ -131,6 +131,28 @@ Requirement, Diagram, and Test Spec instances register **inside their owning Fea
 4. **`canonical_path` is unique per entity** — two entities claiming one path fail `RWG-106`.
 5. **Prefix-ambiguity is rejected in name-based namespaces** (`dom:`, `feat:`, `req:`, `rel:`): no registered ID (or alias) may be a strict prefix of another (e.g. `dom:DOM-01` vs `dom:DOM-011`), because unbounded patterns cannot disambiguate them (`RWG-106`). Path-based namespaces (`diag:`, `testspec:`, `code:`) are exempt. Adapters must additionally use bounded discovery patterns so `FR-001` never matches inside `FR-a01001`.
 6. **Alias resolution boundary:** adapter-facing inputs (discovery output, traceability input) MAY reference aliases — Core resolves them to primary IDs during reconciliation. The canonical graph projection itself MUST contain primary IDs only; an alias appearing as a graph node fails `RWG-104`.
+
+### 2.1.1 Filename convention modes (A4)
+
+The filename convention is adapter-owned; the profile declares one of two modes (`filename_convention` in the profile manifest):
+
+**Mode `id-prefixed`** (legacy default): `<ID>--<name>.md`, e.g. `FEAT-a01--queue_management.md`. Identity is parsed from the filename as a discovery hint; the Registry remains authoritative.
+
+**Mode `name-only`** (recommended for new projects): the filename carries only the human name — `queue_management.md`. Identity travels **inside the file**:
+
+| Artifact | In-file identity declaration |
+|---|---|
+| `.md` (spec, requirement, any governed doc) | frontmatter `id: FEAT-a01` |
+| `.mmd` | `%% @id FEAT-a01:sequence` |
+| `.test.md` | frontmatter `id: FEAT-a01:test01` (optional; `spec:` binding often suffices) |
+
+Rules for `name-only` mode:
+
+1. **Binding precedence:** Registry `canonical_path` > in-file `id` > path inference. A file whose in-file `id` conflicts with the Registry entry that claims its path fails `RWG-109 IDENTITY_BINDING_MISMATCH`; likewise a discovery entry whose path disagrees with the registered `canonical_path` for that ID.
+2. **Renames are trivial:** renaming `queue_management.md` → `playlist_management.md` changes `canonical_path` (+ `label`) only; the in-file `id` keeps the binding intact through the rename, and reconciliation flags any missed registry update loudly (`RWG-102`/`RWG-101`) instead of silently rebinding.
+3. **Display name is data, not identity:** the registry entry carries `label` (e.g. `queue_management`); labels may change freely, IDs may not.
+4. **Diagram/test-spec IDs become feature-scoped, not path-based:** `diag:FEAT-a01:sequence`, `testspec:FEAT-a01:acceptance` — path changes never churn identity. (Path-based `diag:<path>` IDs remain valid for `id-prefixed` projects.)
+5. **ID semantics are mnemonic only:** `FEAT-a01` reads as *[type]-[domain-letter][running number]* — "feature 01 under domain a" — but the letter is a human mnemonic. Authoritative domain membership is ALWAYS `parent_domain_id` in the Registry. A feature that later moves to another domain keeps its ID (the letter goes stale as a mnemonic, which is acceptable) or migrates to a new ID with an alias — the scanner MUST NOT infer or enforce membership from the letter.
 
 The Registry is closed-world by default:
 
@@ -370,5 +392,6 @@ edges:                        # OUTGOING assertions only; inverse is a query
 | Revision | Date | Summary |
 |---|---|---|
 | A1 | 2026-08-20 | Initial draft aligned with CR A1. |
+| A4 | 2026-08-20 | Filename convention modes (§2.1.1): `id-prefixed` vs `name-only` (`queue_management.md` + in-file `id:` frontmatter / `%% @id`); binding precedence + `RWG-109`; `label` field; feature-scoped diagram/test-spec IDs; ID letters are mnemonic, `parent_domain_id` authoritative. Implemented in plugin v1.2.0. |
 | A3 | 2026-08-20 | Rename/alias/prefix-collision rules in §2.1: renames update `canonical_path` only; ID changes require aliases; alias/path/prefix collisions fail `RWG-106`; alias resolution for adapter inputs, primary-ID-only graphs. Implemented in plugin v1.1.1. |
 | A2 | 2026-08-20 | Aligned with CR A2: Definitions (Driver/View/Artifact/Projection); registry tree with `entity-types.yaml`, `releases/`, node manifests, and no upstream/downstream pairs; regex table marked adapter-owned; nested registration, lifecycle status, ID aliasing; canonical edge table with `defines`/`refines`/`supersedes`/`applies_to`, `implements` restricted to `code_file`, `guides` endpoint fixed, `stale` removed; contract example fixed (`contract_version`, `labels`, `provenance`, cardinality `0..*`); semantic-hash normalization algorithm; Hybrid IR / Retrieval Layer / Typed Query IR; profile table with `not_applicable` column + `microservices` profile; profile-owned trust hierarchy and Check #11 heuristics; checks mapped to `RWG-*` codes; verification scenarios keyed to CR test matrix T1–T21; normative schema stubs (Appendix A). |
