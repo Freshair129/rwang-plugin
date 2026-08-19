@@ -1,0 +1,11 @@
+{
+  "generated_by": "rwang:scan-annotations",
+  "source_ref": "fixture-digest-001",
+  "entities": [
+    { "id": "dom:DOM-01", "path": "docs/domains/DOM-01--playback" },
+    { "id": "feat:FEAT-a01", "path": "docs/domains/DOM-01--playback/specs/FEAT-a01--queue.md" },
+    { "id": "req:dom:FR-a01001", "path": "docs/domains/DOM-01--playback/requirements/FR-a01001--queue.md" },
+    { "id": "diag:docs/domains/DOM-01--playback/diagrams/FEAT-a01--queue_sequence.mmd", "path": "docs/domains/DOM-01--playback/diagrams/FEAT-a01--queue_sequence.mmd" },
+    { "id": "testspec:docs/domains/DOM-01--playback/tests/FEAT-a01--queue.test.md", "path": "docs/domains/DOM-01--playback/tests/FEAT-a01--queue.test.md" }
+  ]
+}

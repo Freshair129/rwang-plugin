@@ -1,0 +1,87 @@
+{
+  "version": "2.0.0",
+  "generated_by": "rwang:doc-graph",
+  "generated_at": "2026-08-20T12:00:00Z",
+  "source_ref": "fixture-digest-001",
+  "profile_id": "5-driven-domain",
+  "provenance": {
+    "actor_type": "agent",
+    "actor_id": "claude-fable-5",
+    "tool": "rwang:doc-graph",
+    "tool_version": "1.1.0",
+    "timestamp": "2026-08-20T12:00:00Z",
+    "source_ref": "fixture-digest-001",
+    "approval_ref": "CR-2026-08-20-01#A2"
+  },
+  "stats": {
+    "total_nodes": 7,
+    "total_edges": 5,
+    "stale_edges": 0,
+    "contradiction_edges": 0,
+    "coverage": {
+      "requirements_with_code": { "covered": 1, "total": 1 },
+      "requirements_with_tests": { "covered": 1, "total": 1 }
+    }
+  },
+  "nodes": [
+    { "id": "dom:DOM-01", "type": "domain", "label": "Playback", "path": "docs/domains/DOM-01--playback", "status": "current" },
+    { "id": "feat:FEAT-a01", "type": "feature", "label": "Queue Management", "path": "docs/domains/DOM-01--playback/specs/FEAT-a01--queue.md", "doc_version": "1.0.0", "status": "current" },
+    { "id": "req:dom:FR-a01001", "type": "requirement", "label": "Queue add track", "defined_in": "docs/PRD.md", "status": "current" },
+    { "id": "diag:docs/domains/DOM-01--playback/diagrams/FEAT-a01--queue_sequence.mmd", "type": "diagram", "label": "FEAT-a01 sequence", "path": "docs/domains/DOM-01--playback/diagrams/FEAT-a01--queue_sequence.mmd", "status": "current" },
+    { "id": "testspec:docs/domains/DOM-01--playback/tests/FEAT-a01--queue.test.md", "type": "test_spec", "label": "FEAT-a01 test spec", "path": "docs/domains/DOM-01--playback/tests/FEAT-a01--queue.test.md", "status": "current" },
+    { "id": "code:src/queue.ts", "type": "code_file", "label": "queue.ts", "path": "src/queue.ts", "status": "current" },
+    { "id": "doc:PRD.md", "type": "document", "label": "PRD", "path": "docs/PRD.md", "doc_version": "1.0.0", "doc_status": "approved", "status": "current" }
+  ],
+  "edges": [
+    {
+      "from": "dom:DOM-01",
+      "to": "feat:FEAT-a01",
+      "type": "contains",
+      "contract_id": "edge:domain_contains_feature",
+      "contract_version": "1.0.0",
+      "semantic_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "current",
+      "source": "manifest"
+    },
+    {
+      "from": "feat:FEAT-a01",
+      "to": "diag:docs/domains/DOM-01--playback/diagrams/FEAT-a01--queue_sequence.mmd",
+      "type": "visualized_by",
+      "contract_id": "edge:feature_visualized_by_diagram",
+      "contract_version": "1.0.0",
+      "semantic_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "current",
+      "source": "annotation"
+    },
+    {
+      "from": "feat:FEAT-a01",
+      "to": "testspec:docs/domains/DOM-01--playback/tests/FEAT-a01--queue.test.md",
+      "type": "verified_by",
+      "contract_id": "edge:feature_verified_by_test_spec",
+      "contract_version": "1.0.0",
+      "semantic_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "current",
+      "source": "frontmatter"
+    },
+    {
+      "from": "code:src/queue.ts",
+      "to": "req:dom:FR-a01001",
+      "type": "implements",
+      "contract_id": "edge:code_file_implements_requirement",
+      "contract_version": "1.0.0",
+      "semantic_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "current",
+      "source": "annotation"
+    },
+    {
+      "from": "doc:PRD.md",
+      "to": "req:dom:FR-a01001",
+      "type": "defines",
+      "contract_id": "edge:document_defines_requirement",
+      "contract_version": "1.0.0",
+      "semantic_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "current",
+      "source": "scan"
+    }
+  ]
+}

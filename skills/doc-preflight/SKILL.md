@@ -1,7 +1,7 @@
 ---
 name: doc-preflight
-description: Run a comprehensive health check on project documentation — detect missing sections, internal contradictions, stale references, broken doc-code links, and requirement coverage gaps. Use before releases, after major changes, or as a periodic documentation audit.
-version: 1.0.0
+description: Run a comprehensive health check on project documentation — detect missing sections, internal contradictions, stale references, broken doc-code links, requirement coverage gaps, uncontracted graph edges, unregistered entities, unversioned semantic changes, and graph/registry drift. Use before releases, after major changes, or as a periodic documentation audit.
+version: 1.1.0
 ---
 
 # RWANG / doc-preflight — Document Health Check
@@ -16,15 +16,19 @@ Scan all project documentation for completeness, contradictions, staleness, and 
 - After importing or refactoring documentation
 - User runs `/rwang:doc-preflight`
 
-## Trust Hierarchy
+## Trust Hierarchy (profile-owned)
 
-When contradictions are found, this is the resolution order:
+When contradictions are found, resolve them using the **active profile's declared hierarchy** (`trust_hierarchy` in the profile manifest — see `references/profile-schema.json`). The hierarchy is a profile declaration, not a Core constant.
+
+**Default** (when no profile declares otherwise):
 
 ```
 Code (source of truth) > SDD (design intent) > PRD (business requirements)
 ```
 
-**Rationale**: Code is what actually runs. SDD is what was designed. PRD is what was requested. If they disagree, the downstream artifact is more "true" because it reflects what was actually built/designed.
+**Rationale for the default**: Code is what actually runs. SDD is what was designed. PRD is what was requested. If they disagree, the downstream artifact is more "true" because it reflects what was actually built/designed.
+
+A diagram-first or test-first profile (e.g. `5-driven-domain` during pre-implementation phases) MAY declare a different order such as `Test Spec > Diagram > Spec > Code`. Always name the winning source in findings.
 
 ## Pre-flight Checks
 
@@ -242,6 +246,50 @@ If a glossary exists:
 
 **Severity**: Undefined terms = 🟡, unused definitions = ⚪
 
+### Check 11: Visual Model Coverage (`visual-model-coverage`)
+
+For every feature spec matching the **profile-configured complexity heuristics** (`check_config.visual_model_keywords` in the profile manifest — e.g. the `5-driven-domain` defaults `ws`, `emit`, `broadcast`, `buffer`, `timeout`, `session`; never hard-coded in Core), check that a corresponding `_sequence.mmd` or `_state.mmd` exists in `diagrams/`.
+
+**Severity**: 🟠 WARNING
+**Remediation**: Report the gap. Scaffold a boilerplate Mermaid file from `DIAGRAM_GUIDELINES.md` templates **only when the user explicitly authorizes document generation**.
+
+### Check 12: Acceptance Test Coverage (`test-spec-coverage`)
+
+For every requirement, check for at least one accepted verification source. The active profile decides (`check_config.verification_sources`) whether `.test.md` specs, automated tests, or both are required.
+
+**Severity**: 🟠 WARNING
+**Remediation**: Report the missing verification source; scaffold a test specification only when the user authorizes document generation.
+
+### Check 13: Edge Contract Coverage (`edge-contract-coverage`)
+
+Every graph edge has a registered contract, valid endpoint types, canonical predicate, matching `contract_version` and `semantic_hash`, and exactly one from-side assertion source. Applies equally to `source: manual` edges. `implements` edges originate from `code_file` nodes only; generated artifacts are never evidence sources.
+
+**Severity**: 🔴 CRITICAL — maps to `RWG-201..204`, `RWG-206..209`
+**Remediation**: Register or select the correct contract and fix the assertion source; never fall back to a direct node reference.
+
+### Check 14: Entity Registry Closure (`entity-registry-closure`)
+
+Every discovered or referenced entity is registered; every active registry entry has a valid source projection; every agent-actor registry mutation carries `approval_ref`.
+
+**Severity**: 🔴 CRITICAL — maps to `RWG-101`, `RWG-102`, `RWG-107`
+**Remediation**: Register the entity, or explicitly deprecate/remove the registry entry with provenance. Never auto-register.
+
+### Check 15: Semantic-Diff Gate (`semantic-diff-gate`)
+
+A breaking contract change (endpoint types, direction, predicate meaning, required fields, cardinality, ID namespace) has a new `contract_version` and migration evidence. Governed document changes carry a `doc_version` bump. Raw text similarity is not semantic validation.
+
+**Severity**: 🔴 CRITICAL — maps to `RWG-205`, `RWG-108`
+**Remediation**: Create a versioned contract migration / bump `doc_version`, or restore the previous approved state.
+
+### Check 16: Graph Source Reconciliation (`graph-source-reconciliation`)
+
+Registry, filesystem discovery, manifest assertions, graph nodes, and traceability outputs have equal stable-ID sets for the active profile's required views, and the graph header `source_ref` matches the current checkout (content-digest in no-VCS workspaces). Compare by ID sets, never by counts. Views declared `not_applicable` by the profile are excluded and reported as "declared absent" — which is distinct from empty coverage.
+
+**Severity**: 🔴 CRITICAL — maps to `RWG-103..106`
+**Remediation**: Regenerate projections from the merged checkout; report missing, orphaned, duplicate, or unregistered entities per ID.
+
+**Execution note**: Checks #13–#16 are implemented by `scripts/validate-graph.ps1 -Root <project>` (JSON findings with `RWG-*` codes, non-zero exit on any finding) — run it instead of re-deriving the checks manually.
+
 ## Output Format
 
 ### Summary Dashboard
@@ -268,8 +316,14 @@ If a glossary exists:
 | Doc-Code Symlinks | 🟡 INFO | 0 structured annotations found |
 | Diagrams | ✅ PASS | 13 diagrams valid |
 | Glossary | 🟡 INFO | 4 terms used but not in glossary |
+| Visual Model Coverage | 🟠 WARN | 2 complex features lack sequence/state diagrams |
+| Test Spec Coverage | 🟠 WARN | 5 requirements have no verification source |
+| Edge Contract Coverage | ✅ PASS | 387/387 edges contract-valid |
+| Entity Registry Closure | 🔴 CRIT | 1 unregistered feature (RWG-101) |
+| Semantic-Diff Gate | ✅ PASS | No unversioned breaking changes |
+| Graph Source Reconciliation | 🔴 CRIT | Graph stale vs merged checkout (RWG-103) |
 
-**Overall**: 🟠 **WARN** — 2 critical, 3 warnings, 2 info
+**Overall**: 🔴 **CRIT** — graph publication blocked until RWG findings are resolved
 
 ## Critical Findings (must fix)
 
@@ -307,7 +361,7 @@ Also write findings to `docs/.preflight-report.json`:
   "generated_at": "2026-08-08T00:00:00Z",
   "project": "GPIC",
   "summary": {
-    "total_checks": 10,
+    "total_checks": 16,
     "passed": 5,
     "warnings": 3,
     "critical": 2,
@@ -332,7 +386,10 @@ Also write findings to `docs/.preflight-report.json`:
 
 - **Always scan both docs AND code** — never just one side
 - **Use git log for staleness** — don't guess, check actual commit dates
-- **Report the trust hierarchy** — when contradictions are found, state which source wins
+- **Report the trust hierarchy** — when contradictions are found, state which source wins under the *active profile's* declared hierarchy
+- **RWG codes on critical findings** — checks 13–16 findings carry their `RWG-*` code (CR-2026-08-20-01 A2 §2.9) so remediation is deterministic
+- **Sets, not counts** — reconciliation compares stable-ID sets; a hard-coded entity count is never a valid production check
+- **"Declared absent" ≠ empty** — views the profile marks `not_applicable` are excluded from denominators and never rendered as coverage
 - **Be specific** — "3 docs are stale" is useless; name the files and what changed
 - **Suggest fixes** — every finding must have an actionable recommendation
 - **Don't auto-fix contradictions** — report them and let the user decide (except when Code clearly wins per trust hierarchy)

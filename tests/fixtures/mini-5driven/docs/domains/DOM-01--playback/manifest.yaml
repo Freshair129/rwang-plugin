@@ -1,0 +1,9 @@
+# Node manifest: identity + OUTGOING edge assertions only (CR A2 §2.3.5)
+entity_id: dom:DOM-01
+entity_type: domain
+doc_version: 1.0.0
+edges:
+  - predicate: contains
+    to: feat:FEAT-a01
+    contract_id: edge:domain_contains_feature
+    contract_version: 1.0.0

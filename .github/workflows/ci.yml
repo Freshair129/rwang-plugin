@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # windows-latest so tests run under Windows PowerShell 5.1 — the runtime
+    # the plugin's hook and scripts target.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON (manifests + schemas + fixtures)
+        shell: powershell
+        run: |
+          $failed = $false
+          $targets = @(
+            ".claude-plugin\plugin.json",
+            ".claude-plugin\marketplace.json",
+            ".codex-plugin\plugin.json",
+            "hooks\hooks.json"
+          ) + (Get-ChildItem references\*.json | ForEach-Object { $_.FullName }) `
+            + (Get-ChildItem tests\fixtures -Recurse -Filter *.json | ForEach-Object { $_.FullName })
+          foreach ($f in $targets) {
+            try { Get-Content $f -Raw | ConvertFrom-Json | Out-Null; Write-Host "OK  $f" }
+            catch { Write-Host "FAIL $f : $($_.Exception.Message)"; $failed = $true }
+          }
+          if ($failed) { exit 1 }
+
+      - name: Version consistency (claude vs codex manifest)
+        shell: powershell
+        run: |
+          $claude = (Get-Content .claude-plugin\plugin.json -Raw | ConvertFrom-Json).version
+          $codex  = (Get-Content .codex-plugin\plugin.json  -Raw | ConvertFrom-Json).version
+          if ($claude -ne $codex) {
+            Write-Host "FAIL: .claude-plugin ($claude) != .codex-plugin ($codex) — run scripts\bump-version.ps1"
+            exit 1
+          }
+          Write-Host "OK  version $claude consistent across harness manifests"
+
+      - name: Annotation scanner tests
+        shell: powershell
+        run: .\tests\scan-annotations.tests.ps1
+
+      - name: Graph validator acceptance tests (RWG matrix)
+        shell: powershell
+        run: .\tests\validate-graph.tests.ps1
+
+      - name: Scanner smoke test (bash variant)
+        shell: bash
+        run: |
+          mkdir -p /tmp/rwang-sh-fixture
+          printf '%%%% @req FR-a01001\n%%%% @diagram_type sequence\n' > /tmp/rwang-sh-fixture/f_sequence.mmd
+          printf -- '---\nreq: [FR-a01001]\nspec: FEAT-a01\n---\n' > /tmp/rwang-sh-fixture/f.test.md
+          out=$(bash scripts/scan-annotations.sh /tmp/rwang-sh-fixture table)
+          echo "$out"
+          echo "$out" | grep -q '@req FR-a01001' || { echo "FAIL: .mmd annotation not detected"; exit 1; }
+          echo "$out" | grep -q 'spec: FEAT-a01' || { echo "FAIL: .test.md frontmatter not detected"; exit 1; }

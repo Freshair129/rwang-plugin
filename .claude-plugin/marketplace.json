@@ -1,0 +1,13 @@
+{
+  "name": "rwang",
+  "owner": {
+    "name": "GPIC Team"
+  },
+  "plugins": [
+    {
+      "name": "rwang",
+      "source": "./",
+      "description": "RWANG (อาหวัง) — Document Intelligence System: architect, preflight, contract-bound doc graph, and implementation planning for SWE-standard project documentation"
+    }
+  ]
+}

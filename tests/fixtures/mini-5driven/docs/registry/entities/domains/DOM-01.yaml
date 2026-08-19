@@ -1,0 +1,11 @@
+entity_id: dom:DOM-01
+entity_type: domain
+canonical_path: docs/domains/DOM-01--playback
+status: active
+introduced_by:
+  actor_type: human
+  actor_id: boss
+  tool: rwang:doc-architect
+  tool_version: 1.1.0
+  timestamp: 2026-08-20T00:00:00Z
+  source_ref: fixture-digest-001

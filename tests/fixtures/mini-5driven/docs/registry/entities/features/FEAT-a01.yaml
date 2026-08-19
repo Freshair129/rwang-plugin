@@ -1,0 +1,25 @@
+entity_id: feat:FEAT-a01
+entity_type: feature
+canonical_path: docs/domains/DOM-01--playback/specs/FEAT-a01--queue.md
+parent_domain_id: dom:DOM-01
+status: active
+doc_version: 1.0.0
+nested:
+  requirements:
+    - id: req:dom:FR-a01001
+      path: docs/domains/DOM-01--playback/requirements/FR-a01001--queue.md
+  diagrams:
+    - id: diag:docs/domains/DOM-01--playback/diagrams/FEAT-a01--queue_sequence.mmd
+      path: docs/domains/DOM-01--playback/diagrams/FEAT-a01--queue_sequence.mmd
+      diagram_type: sequence
+  test_specs:
+    - id: testspec:docs/domains/DOM-01--playback/tests/FEAT-a01--queue.test.md
+      path: docs/domains/DOM-01--playback/tests/FEAT-a01--queue.test.md
+introduced_by:
+  actor_type: agent
+  actor_id: claude-fable-5
+  tool: rwang:doc-architect
+  tool_version: 1.1.0
+  timestamp: 2026-08-20T00:00:00Z
+  source_ref: fixture-digest-001
+  approval_ref: CR-2026-08-20-01#A2

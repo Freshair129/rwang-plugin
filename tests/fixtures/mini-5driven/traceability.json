@@ -1,0 +1,5 @@
+{
+  "generated_by": "rwang:doc-graph",
+  "source_ref": "fixture-digest-001",
+  "requirements": ["req:dom:FR-a01001"]
+}

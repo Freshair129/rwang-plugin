@@ -1,0 +1,67 @@
+name: Release
+
+# Cut a release by pushing a tag: git tag v1.1.0 && git push origin v1.1.0
+# The workflow refuses to release when the tag does not match the harness
+# manifests (single version source discipline — see scripts/bump-version.ps1).
+#
+# Note: marketplace installs do NOT auto-update from Releases. The update
+# signal is the plugin.json version on the tracked ref; users pull it with
+# `/plugin marketplace update rwang` or by enabling auto-update. The GitHub
+# Release exists for changelog, provenance anchoring (source_ref), and for
+# harnesses that consume packaged zips.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches manifest versions
+        shell: powershell
+        run: |
+          $tag = $env:GITHUB_REF_NAME.TrimStart('v')
+          $claude = (Get-Content .claude-plugin\plugin.json -Raw | ConvertFrom-Json).version
+          $codex  = (Get-Content .codex-plugin\plugin.json  -Raw | ConvertFrom-Json).version
+          if ($claude -ne $tag -or $codex -ne $tag) {
+            Write-Host "FAIL: tag v$tag but .claude-plugin=$claude, .codex-plugin=$codex — run scripts\bump-version.ps1 -Version $tag and re-tag"
+            exit 1
+          }
+          Write-Host "OK  tag v$tag matches all manifests"
+
+      - name: Run test suites
+        shell: powershell
+        run: |
+          .\tests\scan-annotations.tests.ps1
+          .\tests\validate-graph.tests.ps1
+
+      - name: Package per-harness artifacts
+        shell: powershell
+        run: |
+          $v = $env:GITHUB_REF_NAME
+          New-Item -ItemType Directory dist | Out-Null
+          # Claude Code plugin (full)
+          Compress-Archive -Path .claude-plugin, skills, hooks, scripts, references, docs, README.md, CHANGELOG.md `
+            -DestinationPath "dist/rwang-claude-plugin-$v.zip"
+          # Codex adapter (manifest + shared skills/scripts/references)
+          Compress-Archive -Path .codex-plugin, skills, scripts, references, README.md, CHANGELOG.md `
+            -DestinationPath "dist/rwang-codex-plugin-$v.zip"
+          # Harness-agnostic skill pack (any runtime that consumes SKILL.md folders)
+          Compress-Archive -Path skills, scripts, references, CHANGELOG.md `
+            -DestinationPath "dist/rwang-skills-$v.zip"
+          Get-ChildItem dist
+
+      - name: Create GitHub Release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME dist/*.zip `
+            --title "RWANG $env:GITHUB_REF_NAME" `
+            --notes "See CHANGELOG.md for details. Marketplace users: run ``/plugin marketplace update rwang`` to receive this version."

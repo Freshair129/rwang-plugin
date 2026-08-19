@@ -7,7 +7,7 @@ A Claude Code plugin that brings SWE-standard documentation architecture, health
 | Skill | Command | Description |
 |-------|---------|-------------|
 | **doc-architect** | `/rwang:doc-architect` | Analyze project → score templates → scaffold documentation structure |
-| **doc-preflight** | `/rwang:doc-preflight` | Run 10-point health check: completeness, contradictions, staleness |
+| **doc-preflight** | `/rwang:doc-preflight` | Run 16-point health check: completeness, contradictions, staleness, contract coverage, registry closure, graph reconciliation |
 | **doc-graph** | `/rwang:doc-graph` | Build/update document graph, Change DAG, doc-code symlinks, traceability matrix |
 | **implementation-plan** | `/rwang:implementation-plan` | Generate phase-by-phase roadmap with sprints, risks, milestones |
 | **subagent-driven** | `/rwang:subagent-driven` | Orchestrate multi-step doc work: fresh subagent per task, review gate, fast iteration |
@@ -127,10 +127,57 @@ Standalone scripts for CI/CD integration:
 
 ## Installation
 
+### Claude Code (marketplace — recommended)
+
+This repo is a self-hosted plugin marketplace (`.claude-plugin/marketplace.json`):
+
 ```bash
-# Install as a local plugin
+/plugin marketplace add Freshair129/rwang-plugin
+/plugin install rwang@rwang
+```
+
+**Updates are not automatic** for third-party marketplaces. Pull new versions with
+`/plugin marketplace update rwang`, or enable auto-update in `/plugin` → Marketplaces.
+The update signal is the `version` field in `.claude-plugin/plugin.json` — bumped on
+every release by `scripts/bump-version.ps1`.
+
+### Claude Code (local path)
+
+```bash
 claude plugin add ./rwang-plugin
 ```
+
+### Codex
+
+This repository also includes a Codex adapter at `.codex-plugin/plugin.json`. It exposes the
+existing RWANG skills plus `rwang-self-audit`, a read-only workflow that checks the scanner and
+reports whether a document graph is available. The Codex adapter has no automatic write, approval,
+or promotion behavior.
+
+### Other harnesses
+
+Skills are plain `SKILL.md` folders and the schemas/scripts are harness-agnostic; each
+release publishes a packaged `rwang-skills-v*.zip` for any runtime that consumes skill folders.
+
+## Harness Support
+
+| Harness | Mechanism | Status |
+|---|---|---|
+| Claude Code | `.claude-plugin/plugin.json` + marketplace.json + skills + hooks | ✅ Full (skills, drift hook, slash commands) |
+| Codex | `.codex-plugin/plugin.json` adapter | ✅ Skills + self-audit (no hooks) |
+| Any SKILL.md runtime (Copilot CLI, Gemini CLI, …) | `rwang-skills-v*.zip` release artifact | ⚙️ Skills/scripts only — no hook, no slash namespace |
+
+Known limitation: the drift-check hook (`hooks/hooks.json`) invokes `powershell` and is
+**Windows-only**; on macOS/Linux the hook fails silently. Scanner and validator scripts ship
+in both `.ps1` and `.sh` where applicable.
+
+## Release Automation
+
+- `scripts/bump-version.ps1 -Version X.Y.Z` — syncs the version across every harness manifest (UTF-8-safe).
+- `.github/workflows/ci.yml` — on every push/PR: JSON validation, cross-manifest version consistency, scanner + RWG validator test suites (Windows PowerShell 5.1), bash scanner smoke test.
+- `.github/workflows/release.yml` — on tag `v*`: refuses mismatched tag/manifest versions, runs all tests, packages per-harness zips (`claude-plugin`, `codex-plugin`, `skills`), creates the GitHub Release.
+
+Release procedure: `bump-version.ps1` → update `CHANGELOG.md` → commit → `git tag vX.Y.Z` → `git push --follow-tags`.
 
 ## Trust Hierarchy
 
@@ -163,6 +210,10 @@ rwang-plugin/
 │   ├── scan-annotations.ps1     # Annotation scanner (Windows)
 │   ├── scan-annotations.sh      # Annotation scanner (Unix)
 │   └── drift-check.ps1          # Drift detection hook script
+├── docs/
+│   ├── cr/                      # Change Requests catalog & proposals
+│   ├── SPEC-5DRIVEN-INTEGRATION.md
+│   └── CODEX-ADAPTER-SPEC.md
 ├── references/
 │   ├── templates.json           # Template definitions & scoring rules
 │   └── doc-graph-schema.json    # JSON Schema for .doc-graph.json

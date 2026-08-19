@@ -1,7 +1,7 @@
 ---
 name: doc-architect
-description: Analyze a project's signals (team size, tech stack, compliance needs, AI/ML presence) and recommend the optimal documentation structure. Creates templates, scaffolds doc directories, and establishes requirement ID schemes. Use when starting a new project, auditing existing doc structure, or migrating to SWE-standard documentation.
-version: 1.0.0
+description: Analyze a project's signals (team size, tech stack, compliance needs, AI/ML presence) and recommend the optimal documentation structure. Creates templates, scaffolds doc directories, establishes requirement ID schemes, and generates the Entity Registry, Edge Contract manifest, and view-profile declaration. Use when starting a new project, auditing existing doc structure, or migrating to SWE-standard documentation.
+version: 1.1.0
 ---
 
 # RWANG / doc-architect — Document Structure Decision Engine
@@ -133,6 +133,10 @@ Ask user to confirm choice. Accept:
 - Modification ("3-Layer but add compliance sections")
 - Custom combination ("Layer 1-2 from 3-Layer, Layer 3 from AI/ML")
 
+When the project fits **3-Layer + Appendix** or **IEEE Full Split**, also offer: `Enable 5-Driven SDLC Structure (Diagrams + Test Specs + Domains)`.
+
+**View profile declaration (required):** whatever template is chosen, the project declares a view profile (`5-driven-domain`, `flat-prd-sdd`, `ieee-full`, `microservices`, or project-specific — validated against `references/profile-schema.json`). Every profile explicitly lists `required`, `optional`, AND `not_applicable` views — a project that doesn't use Domain/Feature organization declares those views `not_applicable` rather than leaving them absent. The profile also declares its trust hierarchy and check heuristics.
+
 ### Phase 5: Scaffold
 
 Once confirmed, create the full directory structure.
@@ -254,30 +258,28 @@ Every generated document starts with:
 [+ ISO/IEC 42001 if AI/ML template selected]
 ```
 
-### Phase 6: Initialize Doc Graph
+### Phase 5.5: Generate Registry & Contracts (before scaffolding documents)
 
-After scaffolding, initialize `docs/.doc-graph.json` with the created document nodes:
+Before writing project documents, generate the governance layer (validated against the schemas in `references/`):
 
-```json
-{
-  "version": "1.0.0",
-  "generated_by": "rwang:doc-architect",
-  "generated_at": "2026-08-08T00:00:00Z",
-  "nodes": [
-    {
-      "id": "doc:PRD-SDD-v1.0",
-      "type": "document",
-      "path": "docs/PRD-SDD-v1.0.md",
-      "title": "PRD & SDD",
-      "hash": "",
-      "last_verified": null
-    }
-  ],
-  "edges": []
-}
+```
+docs/registry/
+├── entity-types.yaml        # closed enum of entity types + ID namespaces for this project
+├── entities/
+│   ├── domains/             # one entry per Domain (if the profile uses the Domain view)
+│   ├── features/            # one entry per Feature (parent_domain_id required)
+│   └── releases/            # if the profile enables the Release view
+└── edge-contracts/          # versioned contracts for every predicate the profile uses
+    └── <predicate>@1.0.0.yaml
 ```
 
-Run `rwang:doc-graph` after scaffolding to populate edges.
+Plus a node `manifest.yaml` per Domain/Feature directory (outgoing edge assertions only — never upstream/downstream file pairs; schema: `references/node-manifest-schema.json`).
+
+Every entry carries `introduced_by` provenance; when this skill runs as an agent, registry writes REQUIRE an `approval_ref` (the user's confirmed template/profile choice recorded in Phase 4).
+
+### Phase 6: Initialize Doc Graph
+
+The graph has a **single writer**: `rwang:doc-graph` (schema 2.0.0 rejects other writers). Do not write `.doc-graph.json` from this skill — after scaffolding, invoke `rwang:doc-graph` to generate the initial projection (it will stamp `source_ref`, provenance, contract-backed edges, and run exact-set reconciliation).
 
 ## Output
 
@@ -290,7 +292,7 @@ Run `rwang:doc-graph` after scaffolding to populate edges.
 ## Important Rules
 
 - **Never skip the scoring step** — even if the user says "just use X", show why X is or isn't a good fit
-- **Always create the doc-graph.json** — it's the backbone for doc-preflight and doc-graph skills
+- **Registry before documents** — generate `docs/registry/` and the profile declaration before scaffolding docs; the graph is a projection of the registry, initialized via `rwang:doc-graph` (single writer), never written here
 - **Always include Document Control blocks** — no document without metadata
 - **Bilingual support** — if user writes in Thai, respond in Thai; keep technical terms in English
 - **Adapt to existing docs** — if docs/ already has content, merge rather than overwrite

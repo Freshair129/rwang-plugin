@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # RWANG Annotation Scanner (Unix/macOS/Git Bash)
-# Scans source files for @req, @spec, @designs, @tested annotations
-# and plain requirement ID references (FR-xxx, NFR-xxx, SDD-xxx, etc.)
+# Scans source files for @req, @spec, @designs, @tested annotations,
+# plain requirement ID references (FR-xxx, NFR-xxx, SDD-xxx, etc.),
+# Mermaid annotations (%% @req / %% @spec / %% @diagram_type in .mmd),
+# and test-spec frontmatter (req/spec/test_type in .test.md)
 #
 # Usage:
 #   ./scan-annotations.sh [ROOT_PATH] [FORMAT]
@@ -36,11 +38,20 @@ STRUCTURED_FILE=$(mktemp)
 UNSTRUCTURED_FILE=$(mktemp)
 trap 'rm -f "$STRUCTURED_FILE" "$UNSTRUCTURED_FILE"' EXIT
 
-# Scan for structured annotations
+# Requirement ID pattern: flat (FR-001) plus 5-driven (FR-a01001, FEAT-a01)
+REQ_ID_ERE='(FR-[a-z][0-9]{5}|FEAT-[a-z][0-9]{2}|(FR|NFR|SDD|SEC|AI-AGT|AI-ETH|BR|AC|DR|IR)-[0-9]{3})'
+
+# Scan for structured annotations in code
 grep -rn $INCLUDE_FLAGS $EXCLUDE_DIRS -E '@(req|spec|designs|tested)\s+' "$ROOT_PATH" > "$STRUCTURED_FILE" 2>/dev/null || true
 
+# Scan Mermaid diagram annotations (.mmd): %% @req / %% @spec / %% @diagram_type
+grep -rn --include='*.mmd' $EXCLUDE_DIRS -E '^[[:space:]]*%%[[:space:]]*@(req|spec|diagram_type)[[:space:]]+' "$ROOT_PATH" >> "$STRUCTURED_FILE" 2>/dev/null || true
+
+# Scan test-spec frontmatter (.test.md): req: / spec: / test_type:
+grep -rn --include='*.test.md' $EXCLUDE_DIRS -E '^(req|spec|test_type)[[:space:]]*:' "$ROOT_PATH" >> "$STRUCTURED_FILE" 2>/dev/null || true
+
 # Scan for unstructured requirement references
-grep -rn $INCLUDE_FLAGS $EXCLUDE_DIRS -E '(FR|NFR|SDD|SEC|AI-AGT|AI-ETH|BR|AC|DR|IR)-[0-9]{3}' "$ROOT_PATH" > "$UNSTRUCTURED_FILE" 2>/dev/null || true
+grep -rn $INCLUDE_FLAGS $EXCLUDE_DIRS -E "$REQ_ID_ERE" "$ROOT_PATH" > "$UNSTRUCTURED_FILE" 2>/dev/null || true
 
 # Remove structured annotation lines from unstructured results
 if [ -s "$STRUCTURED_FILE" ]; then
@@ -62,11 +73,11 @@ UNSTRUCTURED_COUNT=$(wc -l < "$UNSTRUCTURED_FILE" | tr -d ' ')
 TOTAL=$((STRUCTURED_COUNT + UNSTRUCTURED_COUNT))
 
 # Count unique requirement IDs
-ALL_IDS=$(cat "$STRUCTURED_FILE" "$UNSTRUCTURED_FILE" | grep -oE '(FR|NFR|SDD|SEC|AI-AGT|AI-ETH|BR|AC|DR|IR)-[0-9]{3}' | sort -u)
+ALL_IDS=$(cat "$STRUCTURED_FILE" "$UNSTRUCTURED_FILE" | grep -oE "$REQ_ID_ERE" | sort -u)
 UNIQUE_ID_COUNT=$(echo "$ALL_IDS" | grep -c . || echo 0)
 
 # Count files scanned
-FILE_COUNT=$(find "$ROOT_PATH" \( -name "*.ts" -o -name "*.tsx" -o -name "*.py" -o -name "*.go" -o -name "*.java" -o -name "*.rs" -o -name "*.cs" \) \
+FILE_COUNT=$(find "$ROOT_PATH" \( -name "*.ts" -o -name "*.tsx" -o -name "*.py" -o -name "*.go" -o -name "*.java" -o -name "*.rs" -o -name "*.cs" -o -name "*.mmd" -o -name "*.test.md" \) \
     -not -path "*/node_modules/*" \
     -not -path "*/__pycache__/*" \
     -not -path "*/.venv/*" \
