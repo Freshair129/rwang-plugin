@@ -2,7 +2,7 @@ name: Release
 
 # Cut a release by pushing a tag: git tag v1.1.0 && git push origin v1.1.0
 # The workflow refuses to release when the tag does not match the harness
-# manifests (single version source discipline — see scripts/bump-version.ps1).
+# manifests (single version source discipline - see scripts/bump-version.ps1).
 #
 # Note: marketplace installs do NOT auto-update from Releases. The update
 # signal is the plugin.json version on the tracked ref; users pull it with
@@ -30,7 +30,7 @@ jobs:
           $claude = (Get-Content .claude-plugin\plugin.json -Raw | ConvertFrom-Json).version
           $codex  = (Get-Content .codex-plugin\plugin.json  -Raw | ConvertFrom-Json).version
           if ($claude -ne $tag -or $codex -ne $tag) {
-            Write-Host "FAIL: tag v$tag but .claude-plugin=$claude, .codex-plugin=$codex — run scripts\bump-version.ps1 -Version $tag and re-tag"
+            Write-Host "FAIL: tag v$tag but .claude-plugin=$claude, .codex-plugin=$codex - run scripts\bump-version.ps1 -Version $tag and re-tag"
             exit 1
           }
           Write-Host "OK  tag v$tag matches all manifests"

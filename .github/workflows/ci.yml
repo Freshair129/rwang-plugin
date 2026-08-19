@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    # windows-latest so tests run under Windows PowerShell 5.1 — the runtime
+    # windows-latest so tests run under Windows PowerShell 5.1 - the runtime
     # the plugin's hook and scripts target.
     runs-on: windows-latest
     steps:
@@ -36,7 +36,7 @@ jobs:
           $claude = (Get-Content .claude-plugin\plugin.json -Raw | ConvertFrom-Json).version
           $codex  = (Get-Content .codex-plugin\plugin.json  -Raw | ConvertFrom-Json).version
           if ($claude -ne $codex) {
-            Write-Host "FAIL: .claude-plugin ($claude) != .codex-plugin ($codex) — run scripts\bump-version.ps1"
+            Write-Host "FAIL: .claude-plugin ($claude) != .codex-plugin ($codex) - run scripts\bump-version.ps1"
             exit 1
           }
           Write-Host "OK  version $claude consistent across harness manifests"
