@@ -225,6 +225,47 @@ Assert-Case -Name "T20 manifest citing outdated contract_version" -ExpectCode "R
         Set-Content -LiteralPath $p -Encoding utf8 -NoNewline
 }
 
+# --- Rename / alias / prefix-collision rules (v1.1.1) -----------------------------
+
+Assert-Case -Name "alias in discovery resolves to primary id (folder rename case)" -ExpectCode "" -Mutate {
+    param($r)
+    $p = Join-Path $r "discovery.json"
+    (Get-Content -LiteralPath $p -Raw).Replace('"dom:DOM-01"', '"dom:DOM-a"') |
+        Set-Content -LiteralPath $p -Encoding utf8
+}
+
+Assert-Case -Name "alias colliding with a registered entity_id" -ExpectCode "RWG-106" -Mutate {
+    param($r)
+    $p = Join-Path $r "docs\registry\entities\features\FEAT-a01.yaml"
+    Add-Content -LiteralPath $p -Value "aliases: [dom:DOM-01]" -Encoding utf8
+}
+
+Assert-Case -Name "two entities claiming the same canonical_path" -ExpectCode "RWG-106" -Mutate {
+    param($r)
+    $p = Join-Path $r "docs\registry\entities\features\FEAT-a01.yaml"
+    (Get-Content -LiteralPath $p -Raw).Replace(
+        "canonical_path: docs/domains/DOM-01--playback/specs/FEAT-a01--queue.md",
+        "canonical_path: docs/domains/DOM-01--playback") |
+        Set-Content -LiteralPath $p -Encoding utf8 -NoNewline
+}
+
+Assert-Case -Name "prefix-ambiguous IDs in a name-based namespace" -ExpectCode "RWG-106" -Mutate {
+    param($r)
+    @'
+entity_id: dom:DOM-011
+entity_type: domain
+canonical_path: docs/domains/DOM-011--ghost
+status: active
+introduced_by:
+  actor_type: human
+  actor_id: boss
+  tool: rwang:doc-architect
+  tool_version: 1.1.1
+  timestamp: 2026-08-20T00:00:00Z
+  source_ref: fixture-digest-001
+'@ | Set-Content -LiteralPath (Join-Path $r "docs\registry\entities\domains\DOM-011.yaml") -Encoding utf8
+}
+
 # --- Provenance neutrality (T14: identity unaffected by session) -----------------
 
 Assert-Case -Name "T14 different session provenance still reconciles" -ExpectCode "" -Mutate {

@@ -4,6 +4,19 @@ All notable changes to the RWANG plugin. Versions follow semver; the
 `version` field in `.claude-plugin/plugin.json` is the update signal for
 marketplace installs.
 
+## [1.1.1] — 2026-08-20
+
+Implements SPEC-5DRIVEN-01 Revision A3 (rename/alias/prefix-collision rules), driven by the BikeOps migration's `DOM-01--` → `DOM-a--` folder-rename proposal.
+
+### Added
+- Validator: alias support in reconciliation — adapter inputs (discovery/traceability) may reference `aliases`; Core resolves them to primary IDs. The canonical graph must contain primary IDs only.
+- Validator collision checks (all `RWG-106`): alias vs entity_id / alias vs alias, duplicate `canonical_path`, and **prefix-ambiguous IDs** in name-based namespaces (`dom:`, `feat:`, `req:`, `rel:`) — e.g. `dom:DOM-01` vs `dom:DOM-011`.
+- Test suite: 4 new mutation cases (22 total) + scanner boundary test (`FR-001` never matches inside `FR-a01001`).
+
+### Clarified (SPEC §2.1, A3)
+- Folder renames change `canonical_path` only — stable IDs never derive from folder names; the domain letter in `FR-a01001` is naming convention, membership comes from `parent_domain_id`.
+- Changing a stable ID is a migration: new entry aliases the old ID.
+
 ## [1.1.0] — 2026-08-20
 
 Implements [CR-2026-08-20-01 (A2, approved)](docs/cr/CR-2026-08-20-01-diagram-test-and-5driven-traceability.md).

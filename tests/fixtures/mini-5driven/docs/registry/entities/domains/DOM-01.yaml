@@ -2,6 +2,7 @@ entity_id: dom:DOM-01
 entity_type: domain
 canonical_path: docs/domains/DOM-01--playback
 status: active
+aliases: [dom:DOM-a]
 introduced_by:
   actor_type: human
   actor_id: boss

@@ -294,6 +294,8 @@ if (Test-Path $entityTypesPath) {
 
 # Registry entries (R)
 $registryIds = @{}        # id -> entry file (duplicate detection)
+$aliasMap = @{}           # alias id -> primary id (rename/equivalence support)
+$canonicalPaths = @{}     # canonical_path -> entity id (path-collision detection)
 $registryEntries = @()
 if (Test-Path $entityDir) {
     foreach ($f in (Get-ChildItem -Path $entityDir -Recurse -File | Where-Object { $_.Name -match '\.(yaml|yml|json)$' })) {
@@ -304,6 +306,30 @@ if (Test-Path $entityDir) {
             Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: '$eid' registered in both '$($registryIds[$eid])' and '$($f.FullName)'"
         } else {
             $registryIds[$eid] = $f.FullName
+        }
+        # canonical_path must be unique per entity
+        $cpath = [string]$e['canonical_path']
+        if ($cpath -ne '') {
+            if ($canonicalPaths.ContainsKey($cpath) -and $canonicalPaths[$cpath] -ne $eid) {
+                Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: canonical_path '$cpath' claimed by both '$($canonicalPaths[$cpath])' and '$eid'"
+            } else {
+                $canonicalPaths[$cpath] = $eid
+            }
+        }
+        # aliases (rename/equivalence, CR A2 SS2.3.4): must not collide with any
+        # entity_id or another alias
+        if ($null -ne $e['aliases']) {
+            foreach ($al in @($e['aliases'])) {
+                $alias = [string]$al
+                if ($alias -eq '') { continue }
+                if ($registryIds.ContainsKey($alias)) {
+                    Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: alias '$alias' of '$eid' collides with a registered entity_id"
+                } elseif ($aliasMap.ContainsKey($alias) -and $aliasMap[$alias] -ne $eid) {
+                    Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: alias '$alias' claimed by both '$($aliasMap[$alias])' and '$eid'"
+                } else {
+                    $aliasMap[$alias] = $eid
+                }
+            }
         }
         # type closure
         $etype = [string]$e['entity_type']
@@ -337,14 +363,40 @@ if (Test-Path $entityDir) {
     }
 }
 
+# Post-load registry consistency: late alias-vs-id collisions and
+# prefix-ambiguous IDs in name-based namespaces (dom:, feat:, req:, rel:).
+# Path-based namespaces (diag:, testspec:, code:) are exempt - file paths
+# legitimately share prefixes.
+foreach ($alias in @($aliasMap.Keys)) {
+    if ($registryIds.ContainsKey($alias)) {
+        Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: alias '$alias' (of '$($aliasMap[$alias])') collides with a registered entity_id"
+    }
+}
+$prefixCheckIds = @($registryIds.Keys + $aliasMap.Keys | Where-Object { $_ -match '^(dom|feat|req|rel):' } | Sort-Object -Unique)
+for ($i = 0; $i -lt $prefixCheckIds.Count; $i++) {
+    for ($j = $i + 1; $j -lt $prefixCheckIds.Count; $j++) {
+        $a = $prefixCheckIds[$i]; $b = $prefixCheckIds[$j]
+        if ($b.StartsWith($a) -and $b.Length -gt $a.Length) {
+            Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: prefix-ambiguous IDs - '$a' is a strict prefix of '$b'; parsers cannot disambiguate them with unbounded patterns. Rename one or separate the namespaces."
+        }
+    }
+}
+
+# Alias resolution: adapter-facing inputs (discovery, traceability) MAY
+# reference aliases; the canonical graph itself MUST use primary IDs.
+function Resolve-Alias([string]$Id) {
+    if ($aliasMap.ContainsKey($Id)) { return $aliasMap[$Id] }
+    return $Id
+}
+
 # Discovery (F)
 $discoveryIds = @{}
 if (Test-Path $discoveryPath) {
     $disc = Get-Content -LiteralPath $discoveryPath -Raw | ConvertFrom-Json
     foreach ($ent in $disc.entities) {
-        $did = [string]$ent.id
+        $did = Resolve-Alias ([string]$ent.id)
         if ($discoveryIds.ContainsKey($did)) {
-            Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: '$did' appears twice in discovery output"
+            Add-Finding "RWG-106" "DUPLICATE_ENTITY_ID: '$did' appears twice in discovery output (aliases resolve to the same entity)"
         }
         $discoveryIds[$did] = $true
     }
@@ -417,7 +469,7 @@ foreach ($id in $gGoverned) {
 # Traceability (T) — requirements set must equal graph requirements
 if (Test-Path $traceabilityPath) {
     $trace = Get-Content -LiteralPath $traceabilityPath -Raw | ConvertFrom-Json
-    $tReqs = @($trace.requirements | ForEach-Object { [string]$_ })
+    $tReqs = @($trace.requirements | ForEach-Object { Resolve-Alias ([string]$_) })
     $gReqs = @($graphNodeIds.Keys | Where-Object { $graphNodeIds[$_] -eq 'requirement' })
     foreach ($id in $gReqs) {
         if ($tReqs -notcontains $id) {
