@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.2",
+  "generatedBy": "rwang:exec-plan",
+  "generatedAt": "2026-08-20T12:00:00Z",
+  "project": {
+    "code": "GAP-CLOSE-2026Q3",
+    "name": "Close spec-vs-code gaps"
+  },
+  "trace": {
+    "correlationId": "plan:GAP-CLOSE-2026Q3:2026-08-20",
+    "idempotencyKey": "plan:GAP-CLOSE-2026Q3:v1"
+  },
+  "domainBinding": {
+    "primaryDomainId": "DOMAIN-PM",
+    "supportingDomainIds": [],
+    "technicalOwnerDomainId": "DOMAIN-PM"
+  },
+  "identityRefs": {
+    "reqIds": ["FR-069", "FR-070"]
+  },
+  "workstreams": [
+    {
+      "code": "WS-DEV",
+      "name": "Contract alignment fixes",
+      "executionMode": "SOFTWARE_SPRINT",
+      "executionModeId": "EXM-SOFTWARE-SPRINT",
+      "executionContractId": "EXC-SOFTWARE-SPRINT-V1",
+      "contractVersion": "1.0",
+      "progressStrategy": "TASK_WEIGHT",
+      "containers": [
+        { "code": "S1", "subtype": "SPRINT", "title": "Sprint 1" },
+        { "code": "E1", "subtype": "EPIC", "title": "Contract alignment", "parentCode": "S1" }
+      ],
+      "items": [
+        {
+          "code": "T1",
+          "containerCode": "S1",
+          "subtype": "TASK",
+          "title": "Align enums.js with plan-envelope schema",
+          "weight": 3,
+          "metrics": { "plannedWeight": 3 },
+          "externalRefs": [{ "system": "gap-analysis", "id": "F-01" }]
+        },
+        {
+          "code": "B1",
+          "containerCode": "S1",
+          "subtype": "BUG",
+          "title": "Zod rejects valid OPERATIONS metric keys",
+          "weight": 1
+        }
+      ],
+      "milestones": [{ "code": "MS1", "title": "Contracts aligned" }],
+      "gates": [{ "code": "G1", "title": "Dry-run passes for all 7 modes", "required": true }]
+    },
+    {
+      "code": "WS-MIG",
+      "name": "Registry backfill",
+      "executionMode": "DATA_MIGRATION",
+      "executionModeId": "EXM-DATA-MIGRATION",
+      "executionContractId": "EXC-DATA-MIGRATION-V1",
+      "contractVersion": "1.0",
+      "progressStrategy": "RECORD_VALIDATION",
+      "containers": [
+        { "code": "M1", "subtype": "MIGRATION_STAGE", "title": "Backfill stage" }
+      ],
+      "items": [
+        {
+          "code": "D1",
+          "containerCode": "M1",
+          "subtype": "DATASET",
+          "title": "Legacy plans",
+          "metrics": { "recordsTotal": 120 }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    { "sourceRef": "WS-MIG", "targetRef": "WS-DEV", "type": "START_AFTER" },
+    { "sourceRef": "B1", "targetRef": "MS1", "type": "BLOCKS" }
+  ]
+}

@@ -4,7 +4,7 @@ A Claude Code plugin that brings SWE-standard documentation architecture, health
 
 ## Commands & Tools
 
-**11 total**: 6 slash commands (skills), 4 standalone scripts, 1 hook.
+**13 total**: 7 slash commands (skills), 5 standalone scripts, 1 hook.
 
 ### Slash Commands (6 skills)
 
@@ -31,7 +31,8 @@ A Claude Code plugin that brings SWE-standard documentation architecture, health
 
 | Skill | Command | Description |
 |-------|---------|-------------|
-| **implementation-plan** | `/rwang:implementation-plan` | Generate phase-by-phase roadmap with sprints, risks, milestones |
+| **implementation-plan** | `/rwang:implementation-plan` | Generate phase-by-phase roadmap with sprints, risks, milestones (human-readable) |
+| **exec-plan** | `/rwang:exec-plan` | Compose a machine-executable PlanEnvelope JSON — workstreams typed by one of 7 execution modes (Zuri-compatible), validated against the mode catalog, importable into an interactive UI |
 | **subagent-driven** | `/rwang:subagent-driven` | Orchestrate multi-step doc work: fresh subagent per task, review gate, fast iteration |
 
 ### Standalone Scripts (CI/local — no AI required)
@@ -40,6 +41,7 @@ A Claude Code plugin that brings SWE-standard documentation architecture, health
 |--------|---------|
 | `scripts/validate-graph.ps1 -Root <project>` | Core validator: contract validation + exact-set reconciliation, emits `RWG-*` findings as JSON; `-Mode hash` prints normalized contract hashes |
 | `scripts/scan-annotations.ps1` / `.sh` | Annotation scanner: `@req/@spec/@designs/@tested` in code, `%% @req/@spec/@diagram_type/@id` in `.mmd`, frontmatter in `.test.md`, doc `id:` frontmatter |
+| `scripts/validate-plan.ps1 -PlanPath <plan.json>` | Execution-plan preflight: closed vocabulary per mode, code integrity, schemaVersion 1.2 requirements — emits `PLN-1xx` findings (catalog: `references/execution-modes/`) |
 | `scripts/bump-version.ps1 -Version X.Y.Z` | Sync plugin version across all harness manifests (release prep) |
 | `scripts/drift-check.ps1` | Drift detector used by the PostToolUse hook (also runnable standalone) |
 

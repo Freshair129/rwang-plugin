@@ -40,6 +40,7 @@ jobs:
         run: |
           .\tests\scan-annotations.tests.ps1
           .\tests\validate-graph.tests.ps1
+          .\tests\validate-plan.tests.ps1
 
       - name: Package per-harness artifacts
         shell: powershell

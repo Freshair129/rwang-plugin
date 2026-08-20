@@ -49,6 +49,10 @@ jobs:
         shell: powershell
         run: .\tests\validate-graph.tests.ps1
 
+      - name: Plan validator acceptance tests (PLN matrix)
+        shell: powershell
+        run: .\tests\validate-plan.tests.ps1
+
       - name: Scanner smoke test (bash variant)
         shell: bash
         run: |

@@ -4,6 +4,19 @@ All notable changes to the RWANG plugin. Versions follow semver; the
 `version` field in `.claude-plugin/plugin.json` is the update signal for
 marketplace installs.
 
+## [1.3.0] — 2026-08-20
+
+New skill package: **exec-plan** — machine-executable Execution Plans.
+
+### Added
+- `skills/exec-plan`: compose a `PlanEnvelope` JSON from a gap analysis / roadmap / implementation plan; workstreams typed by one of **7 execution modes** (SOFTWARE_SPRINT, DATA_MIGRATION, B2B_SALES, B2C_CAMPAIGN, PRODUCT_LAUNCH, OPERATIONS, BUSINESS_EXPANSION), each fixing its progress strategy, container/item subtypes, and metric evidence keys. Output imports into a Zuri-compatible UI for interactive tracking; traceability hooks link items back to the RWANG doc graph (`identityRefs.reqIds`, `externalRefs`).
+- `references/execution-modes/zuri-v2.catalog.json`: vendored mode catalog (from Zuri EXECUTION-MODES.md / FR-069 / FR-070); **target project's own registry always wins**.
+- `scripts/validate-plan.ps1`: plan preflight with `PLN-101..108` findings (unknown mode, contract mismatch, foreign subtype/metric key, code integrity, schemaVersion 1.2 requirements, dependency validity).
+- Tests: 13 mutation cases; the golden fixture is verified VALID against Zuri's real `contracts/plan-envelope.schema.json` (ajv).
+
+### Rules carried over from the graph core
+- Closed vocabulary (never invent modes/subtypes/keys), target dry-run is the final authority, no fabricated metrics, stable idempotency keys.
+
 ## [1.2.0] — 2026-08-20
 
 Implements SPEC-5DRIVEN-01 Revision A4: **name-only filename mode** — filenames carry only the human name (`queue_management.md`); identity travels in-file and binds through the Registry.
