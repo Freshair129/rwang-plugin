@@ -2,15 +2,52 @@
 
 A Claude Code plugin that brings SWE-standard documentation architecture, health checks, knowledge graphs, and implementation planning to any project.
 
-## Skills
+## Commands & Tools
+
+**11 total**: 6 slash commands (skills), 4 standalone scripts, 1 hook.
+
+### Slash Commands (6 skills)
+
+**🏗️ Setup & Scaffolding**
 
 | Skill | Command | Description |
 |-------|---------|-------------|
-| **doc-architect** | `/rwang:doc-architect` | Analyze project → score templates → scaffold documentation structure |
-| **doc-preflight** | `/rwang:doc-preflight` | Run 16-point health check: completeness, contradictions, staleness, contract coverage, registry closure, graph reconciliation |
-| **doc-graph** | `/rwang:doc-graph` | Build/update document graph, Change DAG, doc-code symlinks, traceability matrix |
+| **doc-architect** | `/rwang:doc-architect` | Analyze project → score templates → scaffold docs + Entity Registry + Edge Contracts + profile declaration |
+
+**🔍 Validation & Audit**
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| **doc-preflight** | `/rwang:doc-preflight` | 16-point health check: completeness, contradictions, staleness, contract coverage (#13), registry closure (#14), semantic-diff gate (#15), graph reconciliation (#16) |
+| **rwang-self-audit** | `/rwang:rwang-self-audit` | Read-only self-audit: are this repo's docs, annotations, and graph current before a change/release |
+
+**🕸️ Graph & Traceability**
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| **doc-graph** | `/rwang:doc-graph` | Build/update the contract-bound document graph (schema 2.0.0, single writer), Change DAG, doc-code symlinks, exact-set reconciliation, traceability matrix |
+
+**📋 Planning & Orchestration**
+
+| Skill | Command | Description |
+|-------|---------|-------------|
 | **implementation-plan** | `/rwang:implementation-plan` | Generate phase-by-phase roadmap with sprints, risks, milestones |
 | **subagent-driven** | `/rwang:subagent-driven` | Orchestrate multi-step doc work: fresh subagent per task, review gate, fast iteration |
+
+### Standalone Scripts (CI/local — no AI required)
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/validate-graph.ps1 -Root <project>` | Core validator: contract validation + exact-set reconciliation, emits `RWG-*` findings as JSON; `-Mode hash` prints normalized contract hashes |
+| `scripts/scan-annotations.ps1` / `.sh` | Annotation scanner: `@req/@spec/@designs/@tested` in code, `%% @req/@spec/@diagram_type/@id` in `.mmd`, frontmatter in `.test.md`, doc `id:` frontmatter |
+| `scripts/bump-version.ps1 -Version X.Y.Z` | Sync plugin version across all harness manifests (release prep) |
+| `scripts/drift-check.ps1` | Drift detector used by the PostToolUse hook (also runnable standalone) |
+
+### Hook (1)
+
+| Hook | Trigger | Behavior |
+|------|---------|----------|
+| drift-check | `PostToolUse` on Write/Edit | Warns when an edited file is tracked in the doc graph and may cause staleness (Windows-only, see Harness Support) |
 
 ## Recommended Workflow
 
@@ -113,15 +150,18 @@ The plugin includes a drift-detection hook that warns when you edit code files t
 [RWANG] Run /rwang:doc-preflight to check for staleness.
 ```
 
-## Scanner Scripts
-
-Standalone scripts for CI/CD integration:
+## Scanner & Validator Quick Start
 
 ```powershell
-# PowerShell (Windows)
+# Scan annotations (PowerShell / Windows)
 .\scripts\scan-annotations.ps1 -Path "D:\GPIC" -Format table
 
-# Bash (macOS/Linux/Git Bash)
+# Validate graph + registry (RWG-* findings, exit 1 on any finding)
+.\scripts\validate-graph.ps1 -Root "D:\GPIC"
+```
+
+```bash
+# Scan annotations (macOS/Linux/Git Bash)
 ./scripts/scan-annotations.sh /path/to/project table
 ```
 
