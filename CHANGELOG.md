@@ -4,6 +4,33 @@ All notable changes to the RWANG plugin. Versions follow semver; the
 `version` field in `.claude-plugin/plugin.json` is the update signal for
 marketplace installs.
 
+## [1.4.0] — 2026-09-06
+
+`@tested` reads in both directions, and the scanner says which one it read.
+
+### Added
+- **`@tested <ID>, …` on a test file** — "this test verifies these requirements" — alongside the
+  existing `@tested <file>` on a source file — "this code is verified by that test". Both assert the
+  same `verified_by` relation; they differ only in which end the annotated file is. A project
+  maintains its traceability from one side or the other, and the grammar previously understood only
+  one of them, so every repository that annotates its tests scanned as having no annotations at all.
+  Annotating from the test side is often the more durable choice: the assertion and the claim it
+  verifies sit in one file, so deleting the test takes its claim with it.
+- **`form` on every structured annotation** — `test-ref`, `requirement`, or `section`. It describes
+  what the payload *is*, not which keyword introduced it, which is the distinction a consumer needs:
+  `@designs` already took either a section or an id, and `@tested` now takes either a path or ids.
+  Switching on the keyword alone meant re-parsing the value to find out what you were holding.
+- Tests: both `@tested` forms, `form` classification across `@req` / `@designs` / `@tested`, and a
+  payload that is neither a path nor an id being refused. The cross-scanner parity check covers the
+  new form.
+
+### Changed
+- `scan-annotations.sh` accepts the same two payloads, so the two halves still agree. Verified on a
+  real repository: `src/` 80 annotations / 76 ids and `tests/` 69 / 70, identical from both scanners
+  — the test tree had read as **0 annotations** in both before this.
+- Docs: the annotation table in `skills/doc-graph`, the examples in `README`, the `@tested` check in
+  `skills/doc-preflight`, and the `@tested` description in `references/doc-graph-schema.json`.
+
 ## [1.3.1] — 2026-09-06
 
 Scanner correctness. `scan-annotations` is the only thing that turns a comment into a graph edge, so
