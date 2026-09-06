@@ -49,7 +49,10 @@ trap 'rm -f "$STRUCTURED_FILE" "$UNSTRUCTURED_FILE"' EXIT
 BOM=$(printf '\357\273\277')
 LINE_START="^($BOM)?"
 
-# @tested names a test, not a requirement. Matching @tested with any payload counted lines the
+# @tested carries either of two payloads, running in opposite directions: a test reference on a
+# source file ("this code is verified by that test"), or requirement ids on a test file ("this test
+# verifies those requirements"). Both are accepted; anything else is not an annotation, and matching
+# @tested with an arbitrary payload counted lines the
 # PowerShell scanner rejects as malformed, so the two halves disagreed on every test tree that
 # writes @tested <requirement-id> — a plausible-looking annotation this grammar does not define.
 TEST_REF_ERE="[A-Za-z0-9_./\\-]+\\.(ts|tsx|js|jsx|py|go|rs|java|cs|ps1)(::[A-Za-z0-9_-]+)?"
@@ -74,7 +77,7 @@ UNSTRUCTURED_ERE="${LINE_START}[[:space:]]*(#|//|--|[*]+)[[:space:]]*$REQ_ID_ERE
 # Structured annotations are source comments, never prose or string literals. Without the comment
 # prefix this grep also counted `const s = "@req FR-999"`, which the PowerShell scanner has always
 # rejected — the two halves of one tool disagreed about what an annotation is.
-grep -rn $INCLUDE_FLAGS $EXCLUDE_DIRS -E "${LINE_START}[[:space:]]*(#|//|--|[*]+)[[:space:]]*(@(req|spec|designs)[[:space:]]+|@tested[[:space:]]+${TEST_REF_ERE})" "$ROOT_PATH" > "$STRUCTURED_FILE" 2>/dev/null || true
+grep -rn $INCLUDE_FLAGS $EXCLUDE_DIRS -E "${LINE_START}[[:space:]]*(#|//|--|[*]+)[[:space:]]*(@(req|spec|designs)[[:space:]]+|@tested[[:space:]]+(${TEST_REF_ERE}|${REQ_ID_ERE}))" "$ROOT_PATH" > "$STRUCTURED_FILE" 2>/dev/null || true
 
 # Scan Mermaid diagram annotations (.mmd): %% @req / %% @spec / %% @diagram_type / %% @id
 grep -rn --include='*.mmd' $EXCLUDE_DIRS -E "${LINE_START}[[:space:]]*%%[[:space:]]*@(req|spec|diagram_type|id)[[:space:]]+" "$ROOT_PATH" >> "$STRUCTURED_FILE" 2>/dev/null || true

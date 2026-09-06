@@ -99,6 +99,48 @@ Body text with id: FR-777 after frontmatter must never be scanned.
     if ($ids2 -notcontains "SDD-005") { throw "builder.ts was skipped because its name contains a skip-list word" }
     Write-Host "PASS: namespaced ids are captured whole; skip list matches directories, not filename substrings."
 
+    # --- @tested in both directions ----------------------------------------------------------
+    # The same relation, annotated from whichever side the project maintains. A grammar that knew
+    # only the first form ignored every repository that annotates its tests.
+    @'
+// @tested SDD-004 — a test file naming the requirement it verifies
+// @tested FR-001, ZPP-FR-009 — several, including a namespaced one
+'@ | Set-Content -LiteralPath (Join-Path $fixture "verifies.test.ts") -Encoding utf8
+
+    $report3 = & $scanner -Path $fixture -Format json | ConvertFrom-Json
+    $testedAnnotations = @($report3.annotations | Where-Object { $_.annotation -eq "@tested" })
+
+    $byRef = @($testedAnnotations | Where-Object { $_.form -eq "test-ref" })
+    if ($byRef.Count -lt 1) { throw "The test-reference form of @tested was lost." }
+    if ($byRef[0].ids -notcontains "__tests__/generation.test.ts::creates_generation") {
+        throw "test-ref payload not preserved: $($byRef[0].ids -join ', ')"
+    }
+
+    $byId = @($testedAnnotations | Where-Object { $_.form -eq "requirement" })
+    $idPayload = @($byId | ForEach-Object { $_.ids }) | Sort-Object -Unique
+    foreach ($expected in @("SDD-004", "FR-001", "ZPP-FR-009")) {
+        if ($idPayload -notcontains $expected) { throw "@tested <req-id> did not capture $expected." }
+    }
+
+    # form describes the payload, not the keyword: @designs takes a section or an id, and a consumer
+    # that switches on the keyword alone still has to re-parse the value.
+    $designs = @($report3.annotations | Where-Object { $_.annotation -eq "@designs" })
+    if ($designs.Count -lt 1) { throw "@designs annotation disappeared." }
+    if ($designs[0].form -ne "section") { throw "Expected @designs §5.5 to be form 'section', got '$($designs[0].form)'." }
+
+    $reqs = @($report3.annotations | Where-Object { $_.annotation -eq "@req" })
+    if ($reqs[0].form -ne "requirement") { throw "Expected @req to be form 'requirement', got '$($reqs[0].form)'." }
+
+    # A payload that is neither a test reference nor a requirement id is not an annotation.
+    @'
+// @tested something that is neither a path nor an id
+'@ | Set-Content -LiteralPath (Join-Path $fixture "junk.ts") -Encoding utf8
+    $report4 = & $scanner -Path $fixture -Format json | ConvertFrom-Json
+    $junk = @($report4.annotations | Where-Object { $_.file -like "*junk.ts" })
+    if ($junk.Count -ne 0) { throw "Accepted an @tested payload that is neither a test reference nor a requirement id." }
+
+    Write-Host "PASS: @tested accepts a test reference or requirement ids, and form says which."
+
     # --- the two scanners must agree -------------------------------------------------------
     # scan-annotations.sh is the same tool for another platform. When they disagree, a graph built
     # on one machine differs from the same graph built on another, and neither is wrong locally.
@@ -111,12 +153,13 @@ Body text with id: FR-777 after frontmatter must never be scanned.
         # @tested file references, which the sh report never counts. Only the requirement ids are
         # common ground, and they are what a graph is built from.
         $reqShape = '^([A-Z][A-Z0-9]{1,4}-[A-Z]{2,4}-\d{3}|FR-[a-z]\d{5}|FEAT-[a-z]\d{2}|(FR|NFR|SDD|SEC|AI-AGT|AI-ETH|BR|AC|DR|IR)-\d{3})$'
-        $psReqIds = @($ids2 | Where-Object { $_ -match $reqShape })
+        $ids4 = @($report4.summary.unique_ids)
+        $psReqIds = @($ids4 | Where-Object { $_ -match $reqShape })
         if ($shReport.summary.unique_req_ids -ne $psReqIds.Count) {
             throw "Scanner disagreement: ps1 found $($psReqIds.Count) requirement ids, sh found $($shReport.summary.unique_req_ids)."
         }
-        if ($shReport.summary.structured_count -ne $report2.summary.structured_count) {
-            throw "Scanner disagreement: ps1 found $($report2.summary.structured_count) structured, sh found $($shReport.summary.structured_count)."
+        if ($shReport.summary.structured_count -ne $report4.summary.structured_count) {
+            throw "Scanner disagreement: ps1 found $($report4.summary.structured_count) structured, sh found $($shReport.summary.structured_count)."
         }
         Write-Host "PASS: scan-annotations.ps1 and scan-annotations.sh agree on the same tree."
 

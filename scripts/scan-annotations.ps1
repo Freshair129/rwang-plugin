@@ -67,11 +67,20 @@ $UnstructuredPattern = "$CommentPrefix(?<ids>$RequirementId(?:\s*,\s*$Requiremen
 # FR-093 too, silently, because ADR is not an enumerated kind. Capturing what is recognised and
 # ignoring the rest loses nothing a stricter read would have caught — the annotation was never
 # reported as malformed, only dropped.
+# @tested carries either of two payloads, and they run in opposite directions:
+#
+#   // @tested tests/queue.test.ts::creates   on a source file  — this code is verified by that test
+#   // @tested FR-001, SDD-004                on a test file    — this test verifies those requirements
+#
+# Both assert the same verified_by relation; they differ in which end the annotated file is. A
+# project annotates from whichever side it maintains, and a grammar that only understood the first
+# form silently ignored every repository that annotates its tests. `form` below is what tells a
+# consumer which end it is holding — read the payload, not the keyword.
 $AnnotationPatterns = @{
     "req"     = "$CommentPrefix@req\s+(?<value>$RequirementId(?:\s*,\s*$RequirementId)*)(?:[\s,].*)?$"
     "spec"    = "$CommentPrefix@spec\s+(?<value>$RequirementId(?:\s*,\s*$RequirementId)*)(?:[\s,].*)?$"
     "designs" = "$CommentPrefix@designs\s+(?<value>(?:§\s*\d+(?:\.\d+)*|$RequirementId))(?:[\s,].*)?$"
-    "tested"  = "$CommentPrefix@tested\s+(?<value>$TestReference)(?:[\s,].*)?$"
+    "tested"  = "$CommentPrefix@tested\s+(?<value>$TestReference|$RequirementId(?:\s*,\s*$RequirementId)*)(?:[\s,].*)?$"
 }
 
 # Unstructured requirement ID pattern
@@ -145,11 +154,19 @@ function Scan-File {
                 $value = $Matches["value"].Trim()
                 $ids = ($value -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
 
+                # What the payload IS, not which keyword introduced it. @designs takes a section or
+                # an id; @tested takes a test reference or ids. A consumer that switches on the
+                # keyword alone has to re-parse the value to find out what it got.
+                $form = "requirement"
+                if ($value -match "^$TestReference$") { $form = "test-ref" }
+                elseif ($value -match '^§') { $form = "section" }
+
                 $annotations += @{
                     file       = $relativePath
                     line       = $lineNum
                     type       = "structured"
                     annotation = "@$key"
+                    form       = $form
                     ids        = $ids
                     raw        = $line.Trim()
                 }
